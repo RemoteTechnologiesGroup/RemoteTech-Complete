@@ -1,0 +1,37 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 14
+VisualStudioVersion = 14.0.25420.1
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RemoteTech-Common", "RemoteTech-Common\src\RemoteTech-Common\RemoteTech-Common.csproj", "{95CBBD96-ACEA-42D7-B1B5-05080A8C47FC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RemoteTech-Delay", "RemoteTech-Delay\src\RemoteTech-Delay\RemoteTech-Delay.csproj", "{BD641114-CDC7-411C-81B0-389EC165F1BE}"
+	ProjectSection(ProjectDependencies) = postProject
+		{95CBBD96-ACEA-42D7-B1B5-05080A8C47FC} = {95CBBD96-ACEA-42D7-B1B5-05080A8C47FC}
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RemoteTech-Transmitter", "RemoteTech-Transmitter\src\RemoteTech-Transmitter\RemoteTech-Transmitter.csproj", "{45DE8446-3834-4F31-9025-5FC30A0617F7}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{95CBBD96-ACEA-42D7-B1B5-05080A8C47FC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{95CBBD96-ACEA-42D7-B1B5-05080A8C47FC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{95CBBD96-ACEA-42D7-B1B5-05080A8C47FC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{95CBBD96-ACEA-42D7-B1B5-05080A8C47FC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BD641114-CDC7-411C-81B0-389EC165F1BE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BD641114-CDC7-411C-81B0-389EC165F1BE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BD641114-CDC7-411C-81B0-389EC165F1BE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BD641114-CDC7-411C-81B0-389EC165F1BE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{45DE8446-3834-4F31-9025-5FC30A0617F7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{45DE8446-3834-4F31-9025-5FC30A0617F7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{45DE8446-3834-4F31-9025-5FC30A0617F7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{45DE8446-3834-4F31-9025-5FC30A0617F7}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
