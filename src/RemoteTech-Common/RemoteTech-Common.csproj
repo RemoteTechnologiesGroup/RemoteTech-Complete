@@ -52,11 +52,14 @@
   <ItemGroup>
     <Compile Include="Api\RemoteTechModules.cs" />
     <Compile Include="CommonCore.cs" />
+    <Compile Include="Interfaces\IDelayManager.cs" />
+    <Compile Include="Interfaces\IInstanciable.cs" />
     <Compile Include="Interfaces\IRemoteTechSettings.cs" />
     <Compile Include="Interfaces\ISignalProcessorUnit.cs" />
     <Compile Include="RangeModels\RootRangeModel.cs" />
     <Compile Include="RangeModels\StandardRangeModel.cs" />
     <Compile Include="RemoteTechCommNet\RemoteTechCommNetScenario.cs" />
+    <Compile Include="RemoteTechCommNet\RemoteTechCommNetVessel.cs" />
     <Compile Include="RemoteTechLog.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Settings\RemoteTechAbstractSettings.cs" />
