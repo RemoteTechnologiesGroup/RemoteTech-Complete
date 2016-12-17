@@ -3,6 +3,7 @@ using UnityEngine;
 
 namespace RemoteTech.Delay
 {
+    [KSPAddon(KSPAddon.Startup.Flight, false)]
     public class RemoteTechDelayCoreFlight : RemoteTechDelayCore
     {
         public new void Start()
