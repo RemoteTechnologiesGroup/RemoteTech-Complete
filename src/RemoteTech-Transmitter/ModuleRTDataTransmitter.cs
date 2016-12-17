@@ -12,6 +12,13 @@ namespace RemoteTech.Transmitter
     // TODO: 
     //   - add KSPEvents for enabling and disabling antenna and others from ModuleRTAntenna (RTClassic)
 
+    /// <summary>
+    ///     ModuleRTDataTransmitter class based on KSP's ModuleDataTransmitter, whose purpose is to convey a player visual
+    ///     indications on the progress of a data transmission while delaying the internal delivery of data.
+    ///     This class is to re-base RemoteTech's own antennas to the stock antenna's functionality, and to create even more
+    ///     complex antennas.
+    /// </summary>
+
     // STOCKBUG #13381 This attribute has no effect
     [KSPModule("Data Transmitter (RT)")]
     public class ModuleRTDataTransmitter : ModuleDataTransmitter, IRelayEnabler
@@ -22,7 +29,7 @@ namespace RemoteTech.Transmitter
         private static readonly double stockToRTTransmitDataRateFactor = 0.2;
 
         [KSPField]
-        public double telemetryConsumptionRate = 0.1;
+        public double telemetryConsumptionRate = 0.1; // resource consumption when an antenna is activated (RemoteTech function)
 
         [KSPField]
         public double transmitConsumptionRate = 5.0;
@@ -42,7 +49,7 @@ namespace RemoteTech.Transmitter
         [KSPField]
         public string antennaGUIName = string.Empty;
 
-        [KSPField(guiName = "Partial", guiActive = true),
+        [KSPField(guiName = "Partial transmission", guiActive = true),
             UI_Toggle(disabledText = "Prevent", enabledText = "Allow", scene = UI_Scene.Flight)]
         public bool incompleteAllowed = false;
 
@@ -53,6 +60,9 @@ namespace RemoteTech.Transmitter
         private string[] antennaModuleNames;
         private List<ModuleRTDeployableAntenna> antennasToDeploy = new List<ModuleRTDeployableAntenna>();
 
+        /// <summary>
+        ///     Return the transmission-data rate of a specific antenna
+        /// </summary>
         public override float DataRate
         {
             get
@@ -61,6 +71,9 @@ namespace RemoteTech.Transmitter
             }
         }
 
+        /// <summary>
+        ///     Return the resource cost per Mit of a specific antenna
+        /// </summary>
         public override double DataResourceCost
         {
             get
@@ -69,6 +82,10 @@ namespace RemoteTech.Transmitter
             }
         }
 
+        /// <summary>
+        ///     Read the module node from the config file of a specific antenna into the class's variables
+        /// </summary>
+        /// <param name="node">Config node of ModuleRTDataTransmitter</param>
         public override void OnLoad(ConfigNode node)
         {
             base.OnLoad(node);
@@ -100,6 +117,10 @@ namespace RemoteTech.Transmitter
             }
         }
 
+        /// <summary>
+        ///     Execute a set of conditional actions at the flight/launch start
+        /// </summary>
+        /// <param name="state">Enum-type state of the active vessel</param>
         public override void OnStart(StartState state)
         {
             base.OnStart(state);
@@ -107,7 +128,7 @@ namespace RemoteTech.Transmitter
             {
                 shouldConsume = true;
             }
-            if (antennaModuleNames.Length > 0)
+            if (antennaModuleNames.Length > 0) // verify the antenna has the deployable module that the antennaModuleNames claims to contain
             {
                 for (var i = 0; i < antennaModuleNames.Length; i++)
                 {
@@ -125,6 +146,7 @@ namespace RemoteTech.Transmitter
                     if (!found)
                     {
                         // throw exception?
+                        // TaxiService: log this error to output.txt?
                     }
                 }
             }
@@ -179,6 +201,10 @@ namespace RemoteTech.Transmitter
             Events["StartTransmission"].guiActiveEditor = antennaEnabled;
         }
 
+        /// <summary>
+        ///     Return the description of a specific antenna (stock or RT) to KSP, which precomputes some part data during the Squad-monkey loading screen
+        /// </summary>
+        /// <returns></returns>
         public override string GetInfo()
         {
             var text = new StringBuilder();
@@ -226,6 +252,11 @@ namespace RemoteTech.Transmitter
             return text.ToString();
         }
 
+        /// <summary>
+        ///     Check if an unloaded vessel has at least one antenna
+        /// </summary>
+        /// <param name="mSnap">Saved part data of an unloaded vessel</param>
+        /// <returns></returns>
         public override bool CanCommUnloaded(ProtoPartModuleSnapshot mSnap)
         {
             if (mSnap == null)
@@ -244,11 +275,20 @@ namespace RemoteTech.Transmitter
             }
         }
 
+        /// <summary>
+        ///     Check if a vessel can relay connections from other vessels
+        /// </summary>
+        /// <returns></returns>
         public virtual bool CanRelay()
         {
             return allowRelay && relayEnabled;
         }
 
+        /// <summary>
+        ///     Check if an unloaded vessel with at least one antenna is capable of relaying connections from other vessels
+        /// </summary>
+        /// <param name="mSnap">Saved part data of an unloaded vessel</param>
+        /// <returns></returns>
         public virtual bool CanRelayUnloaded(ProtoPartModuleSnapshot mSnap)
         {
             if (mSnap == null)
@@ -273,6 +313,10 @@ namespace RemoteTech.Transmitter
             }
         }
 
+        /// <summary>
+        ///     Unity Engine invokes this method once, zero or several times per frame. Useful for regular
+        ///     and uniform interval of calculations regardless of player's framerate
+        /// </summary>
         public void FixedUpdate()
         {
             CheckDeployed();
@@ -280,6 +324,9 @@ namespace RemoteTech.Transmitter
             UpdateStatus();
         }
 
+        /// <summary>
+        ///     Unity Engine invokes this method exactly once per frame.
+        /// </summary>
         public void Update()
         {
             if (busy)
@@ -292,6 +339,14 @@ namespace RemoteTech.Transmitter
             }
         }
 
+        /// <summary>
+        ///     Display a looped sequence of data packets over time to a player
+        /// </summary>
+        /// <param name="transmitInterval"></param>
+        /// <param name="dataPacketSize"></param>
+        /// <param name="callback"></param>
+        /// <param name="sendData"></param>
+        /// <returns></returns>
         protected override IEnumerator transmitQueuedData(float transmitInterval, float dataPacketSize, Callback callback = null, bool sendData = true)
         {
             busy = true;
@@ -414,6 +469,10 @@ namespace RemoteTech.Transmitter
             SetAntennaState(false);
         }
 
+        /// <summary>
+        ///     Toggle the part action(s) of a specific antenna (RT function)
+        /// </summary>
+        /// <param name="state"></param>
         protected virtual void SetAntennaState(bool state)
         {
             if (state != antennaEnabled)
@@ -425,6 +484,9 @@ namespace RemoteTech.Transmitter
             }
         }
 
+        /// <summary>
+        ///     On-rail function to deplete the vessel's resource for having this antenna activated
+        /// </summary>
         private void ProcessPower()
         {
             if (shouldConsume)
@@ -459,6 +521,9 @@ namespace RemoteTech.Transmitter
             }
         }
 
+        /// <summary>
+        ///     On-rail function to keep the relevant antenna information updated at all times
+        /// </summary>
         private void CheckDeployed()
         {
             if (isDeployable)
@@ -476,6 +541,9 @@ namespace RemoteTech.Transmitter
             }
         }
 
+        /// <summary>
+        ///     On-rail function to keep the relevant antenna information updated at all times
+        /// </summary>
         private void UpdateStatus()
         {
             if (!busy)
