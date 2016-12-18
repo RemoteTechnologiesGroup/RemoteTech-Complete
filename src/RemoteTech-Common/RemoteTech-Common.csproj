@@ -52,8 +52,8 @@
   <ItemGroup>
     <Compile Include="Api\RemoteTechModules.cs" />
     <Compile Include="CommonCore.cs" />
+    <Compile Include="Extensions\TypeExtensions.cs" />
     <Compile Include="Interfaces\IDelayManager.cs" />
-    <Compile Include="Interfaces\IInstanciable.cs" />
     <Compile Include="Interfaces\IRemoteTechSettings.cs" />
     <Compile Include="Interfaces\ISignalProcessorUnit.cs" />
     <Compile Include="RangeModels\RootRangeModel.cs" />
@@ -65,14 +65,13 @@
     <Compile Include="Settings\RemoteTechAbstractSettings.cs" />
     <Compile Include="Utils\GameUtil.cs" />
     <Compile Include="Utils\PathUtils.cs" />
+    <Compile Include="Utils\Singletons.cs" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Extensions\" />
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>$(TargetDir)pdb2mdb.bat
-$(TargetDir)copy.bat</PostBuildEvent>
+    <PostBuildEvent>call $(TargetDir)pdb2mdb.bat
+call $(TargetDir)copy.bat</PostBuildEvent>
   </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
