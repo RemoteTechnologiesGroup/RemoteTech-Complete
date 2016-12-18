@@ -1,5 +1,7 @@
 # RemoteTech specific
 
+# ignore output dlls on build
+*.dll
 
 ###############################################################################
 ## Ignore Visual Studio temporary files, build results, and
