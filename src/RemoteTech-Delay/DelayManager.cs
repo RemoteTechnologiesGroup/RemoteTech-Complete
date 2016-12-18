@@ -1,18 +1,15 @@
 ﻿using RemoteTech.Common.Interfaces;
+using RemoteTech.Common.Utils;
 using UnityEngine;
 
 namespace RemoteTech.Delay
 {
-    public class DelayManager : MonoBehaviour, IDelayManager, IInstanciable<IDelayManager>
+    public class DelayManager : SimpleMonoBehaviorSingleton<DelayManager>, IDelayManager
     {
         /// <summary>
         ///     Speed of light in vacuum, in meters per second.
         /// </summary>
         public const double LightSpeed = 299792458;
-
-        private static DelayManager _delayManager;
-
-        public static IDelayManager Instance => _delayManager;
 
         public double GetVesselDelay(Vessel vessel)
         {
@@ -40,19 +37,6 @@ namespace RemoteTech.Delay
             var delay = distance / LightSpeed;
 
             return delay;
-        }
-
-        public IDelayManager GetInstance()
-        {
-            return _delayManager;
-        }
-
-        public void Awake()
-        {
-            if (_delayManager != null && _delayManager != this)
-                Destroy(gameObject);
-            else
-                _delayManager = this;
         }
     }
 }
