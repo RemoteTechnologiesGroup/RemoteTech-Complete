@@ -1,7 +1,7 @@
-﻿using CommNet;
+﻿//using CommNet;
 using System;
 using System.Collections;
-using System.Collections.Generic;
+//using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text;
@@ -9,9 +9,6 @@ using UnityEngine;
 
 namespace RemoteTech.Transmitter
 {
-    // TODO: 
-    //   - add KSPEvents for enabling and disabling antenna and others from ModuleRTAntenna (RTClassic)
-
     /// <summary>
     ///     ModuleRTDataTransmitter class based on KSP's ModuleDataTransmitter, whose purpose is to convey a player visual
     ///     indications on the progress of a data transmission while delaying the internal delivery of data.
@@ -21,44 +18,50 @@ namespace RemoteTech.Transmitter
 
     // STOCKBUG #13381 This attribute has no effect
     [KSPModule("Data Transmitter (RT)")]
-    public class ModuleRTDataTransmitter : ModuleDataTransmitter, IRelayEnabler
+    public class ModuleRTDataTransmitter : ModuleDataTransmitter
     {
         // TODO: move this to settings?
-        private static readonly double stockToRTTelemetryConsumptionFactor = 0.05;
-        private static readonly double stockToRTTransmitConsumptionFactor = 0.2;
-        private static readonly double stockToRTTransmitDataRateFactor = 0.2;
+        private const double stockToRTTelemetryConsumptionFactor = 0.05;
+        private const double stockToRTTransmitConsumptionFactor = 0.2;
+        private const double stockToRTTransmitDataRateFactor = 0.2;
 
         [KSPField]
-        public double telemetryConsumptionRate = 0.1; // resource consumption when an antenna is activated (RemoteTech function)
+        public double telemetryConsumption = 1.0; // resource consumption when an antenna is activated (RemoteTech function)
 
         [KSPField]
-        public double transmitConsumptionRate = 5.0;
+        public double transmitConsumption = 5.0;
 
         [KSPField]
-        public double transmitDataRate = 0.5;
+        public double bandwidth = 0.25;
 
         [KSPField(isPersistant = true)]
         public bool antennaEnabled = false;
 
         [KSPField]
-        public bool allowRelay = false;
+        public bool invertedDeployment = false;
 
-        [KSPField(isPersistant = true)]
-        public bool relayEnabled = false;
+        [KSPField]
+        public bool allowToggle = false;
 
         [KSPField]
         public string antennaGUIName = string.Empty;
 
-        [KSPField(guiName = "Partial transmission", guiActive = true),
-            UI_Toggle(disabledText = "Prevent", enabledText = "Allow", scene = UI_Scene.Flight)]
+        [KSPField]
+        public string antennaModuleNames = string.Empty;
+
+        [KSPField(guiName = "Partial", guiActive = true),
+            UI_Toggle(disabledText = "Stop & Return", enabledText = "Leave Incompl.", scene = UI_Scene.Flight)]
         public bool incompleteAllowed = false;
+
+        public string[] antennaModules;
+        public bool isDeployable = false;
 
         private float showProgressInterval = 2f;
         private float timeElapsed = 0f;
-        private bool shouldConsume = false;
-        private bool isDeployable = false;
-        private string[] antennaModuleNames;
-        private List<ModuleRTDeployableAntenna> antennasToDeploy = new List<ModuleRTDeployableAntenna>();
+        private bool inFlight = false;
+        private bool antennaDeployed = false;
+        private string toggleOnText = "Turn Antenna On";
+        private string toggleOffText = "Turn Antenna Off";
 
         /// <summary>
         ///     Return the transmission-data rate of a specific antenna
@@ -67,7 +70,7 @@ namespace RemoteTech.Transmitter
         {
             get
             {
-                return (float)transmitDataRate;
+                return (float)bandwidth;
             }
         }
 
@@ -78,7 +81,15 @@ namespace RemoteTech.Transmitter
         {
             get
             {
-                return transmitConsumptionRate;
+                return transmitConsumption / bandwidth;
+            }
+        }
+
+        private bool isOn
+        {
+            get
+            {
+                return antennaEnabled && antennaDeployed;
             }
         }
 
@@ -88,33 +99,38 @@ namespace RemoteTech.Transmitter
         /// <param name="node">Config node of ModuleRTDataTransmitter</param>
         public override void OnLoad(ConfigNode node)
         {
+            Debug.Log("[ModuleRTDataTransmitter] OnLoad()");
             base.OnLoad(node);
             // generate our values if they're missing in cfg (eg. module replacement MM with no content change)
             if (!node.HasValue("transmitConsumptionRate"))
             {
-                transmitConsumptionRate = Math.Max(Math.Round((packetResourceCost / packetInterval) * stockToRTTransmitConsumptionFactor, 3), 0.001);
+                transmitConsumption = Math.Max(Math.Round((packetResourceCost / packetInterval) * stockToRTTransmitConsumptionFactor, 3), 0.001);
             }
             if (!node.HasValue("telemetryConsumptionRate"))
             {
-                telemetryConsumptionRate = Math.Max(Math.Round(transmitConsumptionRate * stockToRTTelemetryConsumptionFactor, 3), 0.001);
+                telemetryConsumption = Math.Max(Math.Round(transmitConsumption * stockToRTTelemetryConsumptionFactor, 3), 0.001);
             }
             if (!node.HasValue("transmitDataRate"))
             {
-                transmitDataRate = Math.Max(Math.Round((packetSize / packetInterval) * stockToRTTransmitDataRateFactor, 3), 0.001);
+                bandwidth = Math.Max(Math.Round((packetSize / packetInterval) * stockToRTTransmitDataRateFactor, 3), 0.001);
             }
             // this assumes stock is setting resource consumption rate to 1.0
             for (var i = 0; i < resHandler.inputResources.Count; i++)
             {
-                resHandler.inputResources[i].rate *= telemetryConsumptionRate;
+                resHandler.inputResources[i].rate *= telemetryConsumption;
             }
-            if (node.HasValue("antennaModules"))
+            if (node.HasValue("antennaDeployed"))
             {
-                antennaModuleNames = KSPUtil.ParseArray<string>(node.GetValue("antennaModules"), new ParserMethod<string>(s => s));
+                bool.TryParse(node.GetValue("antennaDeployed"), out antennaDeployed);
             }
-            else
-            {
-                antennaModuleNames = new string[0];
-            }
+            antennaModules = antennaModuleNames.Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
+            isDeployable = (antennaModules.Length > 0) || (DeployFxModuleIndices != null && DeployFxModuleIndices.Length > 0);
+        }
+
+        public override void OnSave(ConfigNode node)
+        {
+            base.OnSave(node);
+            node.AddValue("antennaDeployed", antennaDeployed);
         }
 
         /// <summary>
@@ -123,43 +139,33 @@ namespace RemoteTech.Transmitter
         /// <param name="state">Enum-type state of the active vessel</param>
         public override void OnStart(StartState state)
         {
+            Debug.Log("[ModuleRTDataTransmitter] OnStart()");
             base.OnStart(state);
-            if (!(state == StartState.None || state == StartState.Editor))
+            inFlight = state > StartState.Editor;
+            if (antennaModules.Length > 0)
             {
-                shouldConsume = true;
-            }
-            if (antennaModuleNames.Length > 0) // verify the antenna has the deployable module that the antennaModuleNames claims to contain
-            {
-                for (var i = 0; i < antennaModuleNames.Length; i++)
+                deployFxModules.Clear();
+                for (var i = 0; i < antennaModules.Length; i++)
                 {
                     var modules = part.Modules.GetModules<ModuleRTDeployableAntenna>();
                     var found = false;
                     for (var j = 0; j < modules.Count; j++)
                     {
-                        if (modules[j].antennaModuleName == antennaModuleNames[i])
+                        if (modules[j].antennaModuleName.Trim() == antennaModules[i].Trim())
                         {
-                            antennasToDeploy.Add(modules[j]);
+                            deployFxModules.Add(modules[j]);
                             found = true;
                             break;
                         }
                     }
                     if (!found)
                     {
-                        // throw exception?
                         // TaxiService: log this error to output.txt?
+                        // Yuki: log through RT logger
                     }
                 }
             }
-            else if (deployFxModules.Count > 0)
-            {
-                var list = deployFxModules.OfType<ModuleRTDeployableAntenna>().ToList();
-                for (var i = 0; i < list.Count; i++)
-                {
-                    antennasToDeploy.Add(list[i]);
-                }
-            }
-            isDeployable = antennasToDeploy.Count > 0;
-            if (!isDeployable)
+            if (!isDeployable || allowToggle)
             {
                 Events["ToggleAntenna"].active = true;
                 Events["ToggleAntenna"].guiActive = true;
@@ -173,13 +179,21 @@ namespace RemoteTech.Transmitter
                 Actions["EnableAntennaAction"].active = false;
                 Actions["DisableAntennaAction"].active = false;
             }
+            if (!isDeployable)
+            {
+                antennaDeployed = true;
+            }
+            if (antennaType == AntennaType.INTERNAL)
+            {
+                Fields["incompleteAllowed"].guiActive = false;
+            }
             if (antennaGUIName.Length > 0)
             {
                 var name = " (" + antennaGUIName + ")";
 
                 Events["ToggleAntenna"].guiName += name;
-                Events["EnableAntenna"].guiName += name;
-                Events["DisableAntenna"].guiName += name;
+                //Events["EnableAntenna"].guiName += name;
+                //Events["DisableAntenna"].guiName += name;
                 Events["StartTransmission"].guiName += name;
                 Events["StopTransmission"].guiName += name;
 
@@ -191,14 +205,18 @@ namespace RemoteTech.Transmitter
                 Fields["statusText"].guiName += name;
                 Fields["powerText"].guiName += name;
                 Fields["incompleteAllowed"].guiName += name;
+
+                toggleOnText = "Turn " + antennaGUIName + " On";
+                toggleOffText = "Turn " + antennaGUIName + " Off";
             }
             Events["TransmitIncompleteToggle"].active = false;
             Events["TransmitIncompleteToggle"].guiActive = false;
             Events["TransmitIncompleteToggle"].guiActiveEditor = false;
 
-            Events["StartTransmission"].active = antennaEnabled;
-            Events["StartTransmission"].guiActive = antennaEnabled;
-            Events["StartTransmission"].guiActiveEditor = antennaEnabled;
+            Fields["statusText"].guiActive = true;
+            Fields["statusText"].guiActiveEditor = true;
+
+            UpdateContextMenu();
         }
 
         /// <summary>
@@ -207,35 +225,36 @@ namespace RemoteTech.Transmitter
         /// <returns></returns>
         public override string GetInfo()
         {
+            Debug.Log("[ModuleRTDataTransmitter] GetInfo()");
             var text = new StringBuilder();
             text.Append("<b>Antenna Type: </b>");
             text.AppendLine(CultureInfo.CurrentCulture.TextInfo.ToTitleCase(antennaType.ToString().ToLowerInvariant()));
             text.Append("<b>Antenna Power Rating: </b>");
             text.AppendLine(powerText);
-            text.Append("to lvl1 DSN: ");
-            text.AppendLine(KSPUtil.PrintSI(CommNetScenario.RangeModel.GetMaximumRange(antennaPower, GameVariables.Instance.GetDSNRange(0f)), "m", 3, false));
-            text.Append("to lvl2 DSN: ");
-            text.AppendLine(KSPUtil.PrintSI(CommNetScenario.RangeModel.GetMaximumRange(antennaPower, GameVariables.Instance.GetDSNRange(0.5f)), "m", 3, false));
-            text.Append("to lvl3 DSN: ");
-            text.AppendLine(KSPUtil.PrintSI(CommNetScenario.RangeModel.GetMaximumRange(antennaPower, GameVariables.Instance.GetDSNRange(1f)), "m", 3, false));
+            //text.Append("to lvl1 DSN: ");
+            //text.AppendLine(KSPUtil.PrintSI(CommNetScenario.RangeModel.GetMaximumRange(antennaPower, GameVariables.Instance.GetDSNRange(0f)), "m", 3, false));
+            //text.Append("to lvl2 DSN: ");
+            //text.AppendLine(KSPUtil.PrintSI(CommNetScenario.RangeModel.GetMaximumRange(antennaPower, GameVariables.Instance.GetDSNRange(0.5f)), "m", 3, false));
+            //text.Append("to lvl3 DSN: ");
+            //text.AppendLine(KSPUtil.PrintSI(CommNetScenario.RangeModel.GetMaximumRange(antennaPower, GameVariables.Instance.GetDSNRange(1f)), "m", 3, false));
             if (antennaType != AntennaType.INTERNAL)
             {
                 //text.AppendLine();
                 text.Append("<b>Bandwidth: </b>");
-                text.AppendLine(transmitDataRate.ToString("###0.### Mits/s"));
+                text.AppendLine(bandwidth.ToString("###0.### Mits/s"));
             }
 
             //text.AppendLine();
             text.Append("<b><color=orange>Active antenna requires:");
-            var tmpText = resHandler.PrintModuleResources(telemetryConsumptionRate);
+            var tmpText = resHandler.PrintModuleResources(telemetryConsumption);
             var index = tmpText.IndexOf(":");
-            text.AppendLine(tmpText.Substring(index + 1));
+            text.AppendLine(tmpText.Substring(index + 1, tmpText.Length - index - Environment.NewLine.Length));
             if (antennaType != AntennaType.INTERNAL)
             {
                 text.Append("<b><color=orange>Science transmission requires:");
-                tmpText = resHandler.PrintModuleResources(transmitConsumptionRate);
+                tmpText = resHandler.PrintModuleResources(transmitConsumption);
                 index = tmpText.IndexOf(":");
-                text.AppendLine(tmpText.Substring(index + 1));
+                text.AppendLine(tmpText.Substring(index + 1, tmpText.Length - index - Environment.NewLine.Length));
             }
             else
             {
@@ -243,13 +262,18 @@ namespace RemoteTech.Transmitter
             }
             if (antennaEnabled)
             {
-                text.Append("<b><color=#808080ff>Antenna starts enabled</color></b>");
+                text.Append("<b><color=#a0a0a0ff>Enabled by default</color></b>");
             }
             else
             {
-                text.Append("<b><color=#808080ff>Antenna starts disabled</color></b>");
+                text.Append("<b><color=#a0a0a0ff>Disabled by default</color></b>");
             }
             return text.ToString();
+        }
+
+        public override bool CanComm()
+        {
+            return isOn && base.CanComm();
         }
 
         /// <summary>
@@ -263,11 +287,12 @@ namespace RemoteTech.Transmitter
             {
                 return base.CanCommUnloaded(mSnap);
             }
-            if (mSnap.moduleValues.HasValue("antennaEnabled"))
+            if (mSnap.moduleValues.HasValue("antennaEnabled") && mSnap.moduleValues.HasValue("antennaDeployed"))
             {
-                bool isOn;
-                var success = bool.TryParse(mSnap.moduleValues.GetValue("antennaEnabled"), out isOn);
-                return success && isOn && base.CanCommUnloaded(mSnap);
+                bool enabled, deployed;
+                var success = bool.TryParse(mSnap.moduleValues.GetValue("antennaEnabled"), out enabled);
+                success = success & bool.TryParse(mSnap.moduleValues.GetValue("antennaDeployed"), out deployed);
+                return success && enabled && deployed && base.CanCommUnloaded(mSnap);
             }
             else
             {
@@ -275,57 +300,25 @@ namespace RemoteTech.Transmitter
             }
         }
 
-        /// <summary>
-        ///     Check if a vessel can relay connections from other vessels
-        /// </summary>
-        /// <returns></returns>
-        public virtual bool CanRelay()
+        public override bool CanTransmit()
         {
-            return allowRelay && relayEnabled;
-        }
-
-        /// <summary>
-        ///     Check if an unloaded vessel with at least one antenna is capable of relaying connections from other vessels
-        /// </summary>
-        /// <param name="mSnap">Saved part data of an unloaded vessel</param>
-        /// <returns></returns>
-        public virtual bool CanRelayUnloaded(ProtoPartModuleSnapshot mSnap)
-        {
-            if (mSnap == null)
-            {
-                return false;
-            }
-            if (mSnap.moduleValues.HasValue("allowRelay") && mSnap.moduleValues.HasValue("relayEnabled"))
-            {
-                bool
-                    allowed = false,
-                    enabled = false,
-                    success = false;
-                if (bool.TryParse(mSnap.moduleValues.GetValue("allowRelay"), out allowed))
-                {
-                    success = bool.TryParse(mSnap.moduleValues.GetValue("relayEnabled"), out enabled);
-                }
-                return success && allowed && enabled && base.CanCommUnloaded(mSnap);
-            }
-            else
-            {
-                return false;
-            }
+            return isOn && base.CanTransmit();
         }
 
         /// <summary>
         ///     Unity Engine invokes this method once, zero or several times per frame. Useful for regular
-        ///     and uniform interval of calculations regardless of player's framerate
+        ///     and uniform interval of calculations regardless of player's framerate.
+        ///     Generally used for physics and other game mechanics.
         /// </summary>
         public void FixedUpdate()
         {
             CheckDeployed();
             ProcessPower();
-            UpdateStatus();
         }
 
         /// <summary>
         ///     Unity Engine invokes this method exactly once per frame.
+        ///     Genereally used for GUI and similar. Not bound to "ingame" time in any way.
         /// </summary>
         public void Update()
         {
@@ -341,6 +334,7 @@ namespace RemoteTech.Transmitter
 
         /// <summary>
         ///     Display a looped sequence of data packets over time to a player
+        ///     In RT, this sends data as a "stream" instead of chunks, moving small ammounts every fixed update.
         /// </summary>
         /// <param name="transmitInterval"></param>
         /// <param name="dataPacketSize"></param>
@@ -349,9 +343,15 @@ namespace RemoteTech.Transmitter
         /// <returns></returns>
         protected override IEnumerator transmitQueuedData(float transmitInterval, float dataPacketSize, Callback callback = null, bool sendData = true)
         {
+            // TODO: There's some weirdness when trying to transmit science in sandbox mode
+            // It would be simple to just skip it and don't transmit anything, but it might be better
+            // to "simulate" the transmission and consume resources, etc.
+
+            Debug.Log("[ModuleRTDataTransmitter] transmitQueuedData()");
             busy = true;
             timeElapsed = 0f;
             Events["StopTransmission"].active = true;
+            Events["StartTransmission"].active = false;
 
             while (transmissionQueue.Any() && !xmitAborted)
             {
@@ -363,13 +363,13 @@ namespace RemoteTech.Transmitter
 
                 scienceData.triggered = true;
 
-                statusMessage.message = string.Format("[{0}]: Starting Transmission of {1}", part.partInfo.title, scienceData.title);
-                ScreenMessages.PostScreenMessage(statusMessage);
+                ScreenMessages.PostScreenMessage(string.Format("[{0}]: Starting Transmission of {1}.", part.partInfo.title, scienceData.title), 4f, ScreenMessageStyle.UPPER_LEFT);
 
                 var subject = ResearchAndDevelopment.GetSubjectByID(scienceData.subjectID);
                 if (subject == null)
                 {
                     AbortTransmission(string.Format("[{0}]: Unable to identify science subjectID:{1}!", part.partInfo.title, scienceData.subjectID));
+                    yield return null;
                 }
                 if (ResearchAndDevelopment.Instance != null)
                 {
@@ -380,12 +380,13 @@ namespace RemoteTech.Transmitter
                 else
                 {
                     AbortTransmission("Could not find Research and Development facility!");
+                    yield return null;
                 }
                 statusText = "Transmitting";
                 while (dataThrough < dataAmount && !xmitAborted)
                 {
                     yield return new WaitForFixedUpdate();
-                    var pushData = (float)(TimeWarp.fixedDeltaTime * transmitDataRate);
+                    var pushData = (float)(TimeWarp.fixedDeltaTime * bandwidth);
                     commStream.StreamData(pushData, vessel.protoVessel);
                     dataThrough += pushData;
                     progress = dataThrough / dataAmount;
@@ -399,32 +400,29 @@ namespace RemoteTech.Transmitter
                 }
                 if (dataThrough < dataAmount && dataThrough > 0 && xmitIncomplete)
                 {
-                    statusMessage.message = string.Format("[{0}]: <color=orange>Partial</color> transmission of {1} completed", part.partInfo.title, scienceData.title);
                     GameEvents.OnTriggeredDataTransmission.Fire(scienceData, vessel, false);
                     transmissionQueue.RemoveAt(0);
+                    ScreenMessages.PostScreenMessage(string.Format("[{0}]: <color=orange>Partial</color> transmission of {1} completed.", part.partInfo.title, scienceData.title), 4f, ScreenMessageStyle.UPPER_LEFT);
                 }
                 if (dataThrough >= dataAmount)
                 {
                     GameEvents.OnTriggeredDataTransmission.Fire(scienceData, vessel, false);
                     transmissionQueue.RemoveAt(0);
-                    statusMessage.message = string.Format("[{0}]: Transmission of {1} completed", part.partInfo.title, scienceData.title);
-                    ScreenMessages.PostScreenMessage(statusMessage);
+                    ScreenMessages.PostScreenMessage(string.Format("[{0}]: Transmission of {1} completed.", part.partInfo.title, scienceData.title), 4f, ScreenMessageStyle.UPPER_LEFT);
                 }
             }
-
             if (xmitAborted && transmissionQueue.Any())
             {
-                statusMessage.message = string.Format("[{0}]: Returning unsent data.", part.partInfo.title);
-                ScreenMessages.PostScreenMessage(statusMessage);
                 foreach (var data in transmissionQueue)
                 {
                     ReturnDataToContainer(data);
                 }
+                ScreenMessages.PostScreenMessage(string.Format("[{0}]: Unsent data returned.", part.partInfo.title), 4f, ScreenMessageStyle.UPPER_LEFT);
             }
             timeElapsed = 0f;
             Events["StopTransmission"].active = false;
             busy = false;
-            statusText = "Idle";
+            UpdateContextMenu();
             xmitAborted = false;
 
             if (callback != null)
@@ -451,11 +449,11 @@ namespace RemoteTech.Transmitter
             SetAntennaState(true);
         }
 
-        [KSPEvent(guiName = "Enable antenna")]
-        public void EnableAntenna()
-        {
-            SetAntennaState(true);
-        }
+        //[KSPEvent(guiName = "Enable antenna")]
+        //public void EnableAntenna()
+        //{
+        //    SetAntennaState(true);
+        //}
 
         [KSPAction(guiName = "Disable antenna", actionGroup = KSPActionGroup.None)]
         public void DisableAntennaAction(KSPActionParam param)
@@ -463,41 +461,39 @@ namespace RemoteTech.Transmitter
             SetAntennaState(false);
         }
 
-        [KSPEvent(guiName = "Disable antenna")]
-        public void DisableAntenna()
-        {
-            SetAntennaState(false);
-        }
+        //[KSPEvent(guiName = "Disable antenna")]
+        //public void DisableAntenna()
+        //{
+        //    SetAntennaState(false);
+        //}
 
         /// <summary>
         ///     Toggle the part action(s) of a specific antenna (RT function)
         /// </summary>
         /// <param name="state"></param>
-        protected virtual void SetAntennaState(bool state)
+        private void SetAntennaState(bool state)
         {
             if (state != antennaEnabled)
             {
                 antennaEnabled = state;
-                Events["StartTransmission"].active = state;
-                Events["StartTransmission"].guiActive = state;
-                Events["StartTransmission"].guiActiveEditor = state;
+                UpdateContextMenu();
             }
         }
 
         /// <summary>
-        ///     On-rail function to deplete the vessel's resource for having this antenna activated
+        ///     Check and consume the vessel's resource for this antenna activated or active transmission of data.
         /// </summary>
         private void ProcessPower()
         {
-            if (shouldConsume)
+            if (inFlight)
             {
-                if (antennaEnabled)
+                if (isOn )
                 {
                     var resErrorMsg = "";
                     var resAvailable = 1.0d;
                     if (busy)
                     {
-                        resAvailable = resHandler.UpdateModuleResourceInputs(ref resErrorMsg, transmitConsumptionRate / telemetryConsumptionRate, 0.99, true, false, true);
+                        resAvailable = resHandler.UpdateModuleResourceInputs(ref resErrorMsg, transmitConsumption / telemetryConsumption, 0.99, true, false, true);
                         if (resAvailable < 0.99)
                         {
                             AbortTransmission(resErrorMsg);
@@ -508,7 +504,7 @@ namespace RemoteTech.Transmitter
                         resAvailable = resHandler.UpdateModuleResourceInputs(ref resErrorMsg, 1.0, 0.99, true, false, true);
                         if (resAvailable < 0.99)
                         {
-                            antennaEnabled = false;
+                            SetAntennaState(false);
                             errorMessage.message = string.Format("[{0}]: Antenna shutting down, {1}", part.partInfo.title, resErrorMsg);
                             ScreenMessages.PostScreenMessage(errorMessage);
                         }
@@ -522,39 +518,77 @@ namespace RemoteTech.Transmitter
         }
 
         /// <summary>
-        ///     On-rail function to keep the relevant antenna information updated at all times
+        ///     Check and update antenna status from fxmodules' state
         /// </summary>
         private void CheckDeployed()
         {
             if (isDeployable)
             {
-                var res = true;
-                for (var i = 0; i < antennasToDeploy.Count; i++)
+                bool deployed;
+                if (invertedDeployment)
                 {
-                    if (antennasToDeploy[i].GetScalar < 0.99f)
-                    {
-                        res = false;
-                        break;
-                    }
+                    deployed = (GetModulesScalarMin(deployFxModules) < 0.1);
                 }
-                SetAntennaState(res);
+                else
+                {
+                    deployed = (GetModulesScalarMin(deployFxModules) > 0.9);
+                }
+                if (antennaDeployed != deployed)
+                {
+                    antennaDeployed = deployed;
+                    if (!allowToggle)
+                    {
+                        SetAntennaState(deployed);
+                    }
+                    UpdateContextMenu();
+                }
             }
         }
 
         /// <summary>
-        ///     On-rail function to keep the relevant antenna information updated at all times
+        ///     Function to keep the relevant antenna information in context menu updated at all times
         /// </summary>
-        private void UpdateStatus()
+        private void UpdateContextMenu()
         {
             if (!busy)
             {
-                if (antennaEnabled)
+                if (inFlight && antennaType!=AntennaType.INTERNAL)
                 {
-                    statusText = "Enabled";
+                    Events["StartTransmission"].active = isOn;
+                    Events["StartTransmission"].guiActive = isOn;
+                    Events["StartTransmission"].guiActiveEditor = isOn;
+                }
+                if (isDeployable)
+                {
+                    if (antennaDeployed && antennaEnabled)
+                    {
+                        statusText = "Ready";
+                    }
+                    if (antennaDeployed && !antennaEnabled)
+                    {
+                        statusText = "Deployed, Off";
+                    }
+                    if (antennaEnabled && !antennaDeployed)
+                    {
+                        statusText = "Not deployed, On";
+                    }
+                    if (!antennaEnabled && !antennaDeployed)
+                    {
+                        statusText = "Not deployed, Off";
+                    }
                 }
                 else
                 {
-                    statusText = "Disabled";
+                    if (antennaEnabled)
+                    {
+                        statusText = "Ready";
+                        //Events["ToggleAntenna"].guiName = toggleOffText;
+                    }
+                    else
+                    {
+                        statusText = "Off";
+                        //Events["ToggleAntenna"].guiName = toggleOnText;
+                    }
                 }
             }
         }
