@@ -8,7 +8,8 @@ Prerequisites:
         - can be overridden with --input-dir.
 
     - Working directory is the root directory of the repository
-        (RemoteTech-Complete/)
+        (RemoteTech-Complete/) unless changed with the --cwd command line
+        option.
 """
 import logging
 import shutil
@@ -24,12 +25,31 @@ LOGGING_LEVELS = {
     'error': logging.ERROR,
     'critical': logging.CRITICAL,
 }
+"""dict: logging level names to be used with --logging-level command line
+option."""
 
 SOURCE_DIR = "src"
+"""str: name of the source directory (relative to the root folder)."""
+
 DEFAULT_INPUT_DIR = "{}{}output".format(SOURCE_DIR, os.sep)
+"""str: default input directory for the packager.
+
+ This is the location where compiled assemblies are put once compiled."""
+
 DEFAULT_OUTPUT_DIR = "{0}{1}GameData{1}RemoteTech".format(SOURCE_DIR, os.sep)
+"""str: default output directory for the packager.
+
+ This is the location where the final package is put."""
+
 NON_MODULE_PACKAGES = ["RemoteTech-Antennas"]
+"""Iterable[str]: Names of packages that have no compiled modules.
+
+These modules are just composed of files to be copied and are handled
+differently than packages with compiled modules."""
+
 NO_COPY_FILE_NAMES = [".gitattributes", ".gitignore"]
+"""Iterable[str]: List of files that are not copied in `NON_MODULE_PACKAGES`
+packages."""
 
 
 class Packager(object):
@@ -43,9 +63,10 @@ class Packager(object):
         """Set the current working directory for this script.
 
         Args:
-            relative_path:
+            relative_path: the current working directory of this script,
+                relative to its location.
 
-        Returns:
+        Returns: The full path of the current working directory.
 
         """
 
@@ -79,13 +100,26 @@ class Packager(object):
             script_dir = rt_complete_dir
 
         os.chdir(script_dir)
-
         self.cwd = script_dir
 
         return script_dir
 
     @staticmethod
-    def make_directory(root_dir, path, is_relative=True):
+    def get_directory(root_dir: Optional[str], path: str,
+                      is_relative: bool=True) -> str:
+        """Produce a directory path.
+
+        Args:
+            root_dir: base path of the directory. Ignored if ìs_relative`is
+                False.
+            path: relative path to `root_dir` if `is_relative` is True,
+                otherwise full path.
+            is_relative: if True, then `path` is relative to `root_dir`.
+                Otherwise, `root_dir` is ignored and `path` is a full path.
+
+        Returns: The constructed path from the arguments.
+
+        """
         if is_relative:
             directory = os.path.join(root_dir, path)
         else:
@@ -93,17 +127,36 @@ class Packager(object):
 
         return directory
 
-    def set_input_dir(self, root_dir, output_path, is_relative=True):
-        self.input_dir = Packager.make_directory(root_dir, output_path,
-                                                 is_relative)
+    def set_input_dir(self, root_dir: Optional[str], input_path: str,
+                      is_relative: bool=True) -> str:
+        """Construct input directory for the packager.
+
+        See `get_directory` for arguments.
+
+        """
+        self.input_dir = Packager.get_directory(root_dir, input_path,
+                                                is_relative)
         return self.input_dir
 
-    def set_output_dir(self, root_dir, input_path, is_relative=True):
-        self.output_dir = Packager.make_directory(root_dir, input_path,
-                                                  is_relative)
+    def set_output_dir(self, root_dir: Optional[str], output_path: str,
+                       is_relative: bool=True) -> str:
+        """Construct output directory for the packager.
+
+        See `get_directory` for arguments.
+
+        """
+        self.output_dir = Packager.get_directory(root_dir, output_path,
+                                                 is_relative)
         return self.output_dir
 
     def check_input_and_output_dirs(self):
+        """Check validity of input and output directories.
+
+        Note:
+            - If the output directory is not present, it is created.
+            - If the output directory is already present, it is wiped.
+
+        """
         if not self.input_dir:
             raise RuntimeError("input_dir is None")
         if not os.path.isdir(self.input_dir):
@@ -123,6 +176,9 @@ class Packager(object):
             os.makedirs(self.output_dir, exist_ok=True)
 
     def package_release(self):
+        """Build the release package.
+
+        """
         self.package_modules()
         self.package_directory()
 
@@ -187,6 +243,7 @@ def main(args):
                  "\n\tInput directory: {}\n\tOutput directory: {}"
                  .format(packager.cwd, packager.input_dir, packager.output_dir))
 
+    # do the actual release packaging
     packager.package_release()
 
     logging.info("Job done. Quitting!")
