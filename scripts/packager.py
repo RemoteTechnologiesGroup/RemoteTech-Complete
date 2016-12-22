@@ -25,17 +25,21 @@ LOGGING_LEVELS = {
     'critical': logging.CRITICAL,
 }
 
-DEFAULT_INPUT_DIR = "src{}output".format(os.sep)
-DEFAULT_OUTPUT_DIR = "src{0}GameData{0}RemoteTech".format(os.sep)
+SOURCE_DIR = "src"
+DEFAULT_INPUT_DIR = "{}{}output".format(SOURCE_DIR, os.sep)
+DEFAULT_OUTPUT_DIR = "{0}{1}GameData{1}RemoteTech".format(SOURCE_DIR, os.sep)
+NON_MODULE_PACKAGES = ["RemoteTech-Antennas"]
+NO_COPY_FILE_NAMES = [".gitattributes", ".gitignore"]
 
 
 class Packager(object):
     def __init__(self):
+        self.source_dir = None
         self.input_dir = None
         self.output_dir = None
+        self.cwd = None
 
-    @staticmethod
-    def setup_cwd(relative_path: Optional[str]=None) -> str:
+    def setup_cwd(self, relative_path: Optional[str]=None) -> str:
         """Set the current working directory for this script.
 
         Args:
@@ -45,8 +49,21 @@ class Packager(object):
 
         """
 
+        # get current script directory
         script_dir = os.path.dirname(os.path.abspath(__file__))
+
+        # get source directory
+        self.source_dir = os.path.abspath(
+            os.path.join(script_dir, "..", SOURCE_DIR))
+
+        if not os.path.isdir(self.source_dir):
+            raise RuntimeError(
+                "Source directory couldn't be found in '{}'.".format(
+                    self.source_dir)
+            )
+
         if relative_path:
+            # if given path is relative, just add to current directory
             script_dir = os.path.join(script_dir, relative_path)
         else:
             # are we living in '/scripts' dir?
@@ -62,6 +79,8 @@ class Packager(object):
             script_dir = rt_complete_dir
 
         os.chdir(script_dir)
+
+        self.cwd = script_dir
 
         return script_dir
 
@@ -103,19 +122,72 @@ class Packager(object):
             # recreate it
             os.makedirs(self.output_dir, exist_ok=True)
 
+    def package_release(self):
+        self.package_modules()
+        self.package_directory()
+
+    def package_directory(self):
+        for package_name in NON_MODULE_PACKAGES:
+            package_path_src = os.path.join(self.source_dir, package_name)
+            if not os.path.isdir(package_path_src):
+                raise RuntimeError(
+                    "Packaging non module: {} is not a directory."
+                    .format(package_path_src))
+
+            logging.info("Packaging: {}".format(package_name))
+
+            package_path_dst = os.path.join(self.output_dir, package_name)
+            shutil.copytree(package_path_src, package_path_dst,
+                            ignore=shutil.ignore_patterns(*NO_COPY_FILE_NAMES))
+
+    def package_modules(self):
+        for module_full_path in self.get_modules():
+            # get file name (with extension)
+            _, tail = os.path.split(module_full_path)
+            # get file name
+            root, _ = os.path.splitext(tail)
+
+            if not tail or not root:
+                raise RuntimeError(
+                    "No root or tail in module name.")
+
+            logging.info("Packaging: {}".format(root))
+
+            # create sub-directory in output directory
+            sub_dir = os.path.join(self.output_dir, root)
+            os.mkdir(sub_dir)
+
+            # copy module into newly created output sub-directory
+            old_path = module_full_path
+            new_path = os.path.join(sub_dir, tail)
+            shutil.copy2(old_path, new_path)
+
+    def get_modules(self):
+        for module_name in os.listdir(self.input_dir):
+            module_full_path = os.path.join(self.input_dir, module_name)
+            _, ext = os.path.splitext(module_name)
+            if ext.lower() == ".dll":
+                yield module_full_path
+
 
 def main(args):
     logging.info("Starting packaging script.")
 
-    cwd = Packager.setup_cwd(args.cwd)
-    logging.info("Current working directory: {}".format(cwd))
-
     packager = Packager()
 
-    # set up and check input and output directories
-    packager.set_input_dir(cwd, args.input_dir, args.input_dir_relative)
-    packager.set_output_dir(cwd, args.output_dir, args.output_dir_relative)
+    # set up directories (cwd, input, output)
+    packager.setup_cwd(args.cwd)
+    packager.set_input_dir(packager.cwd, args.input_dir,
+                           args.input_dir_relative)
+    packager.set_output_dir(packager.cwd, args.output_dir,
+                            args.output_dir_relative)
     packager.check_input_and_output_dirs()
+
+    logging.info("Directories:\n\tCurrent working directory: {}"
+                 "\n\tInput directory: {}\n\tOutput directory: {}"
+                 .format(packager.cwd, packager.input_dir, packager.output_dir))
+
+    packager.package_release()
 
     logging.info("Job done. Quitting!")
 
