@@ -13,10 +13,12 @@ Prerequisites:
 """
 import logging
 import shutil
-from typing import Optional
+from typing import Optional, Iterable
 import argparse
 import os
+import glob
 
+import packager_config
 
 LOGGING_LEVELS = {
     'debug': logging.DEBUG,
@@ -31,33 +33,22 @@ option."""
 SOURCE_DIR = "src"
 """str: name of the source directory (relative to the root folder)."""
 
-DEFAULT_INPUT_DIR = "{}{}output".format(SOURCE_DIR, os.sep)
-"""str: default input directory for the packager.
-
- This is the location where compiled assemblies are put once compiled."""
-
 DEFAULT_OUTPUT_DIR = "{0}{1}GameData{1}RemoteTech".format(SOURCE_DIR, os.sep)
 """str: default output directory for the packager.
 
  This is the location where the final package is put."""
 
-NON_MODULE_PACKAGES = ["RemoteTech-Antennas"]
-"""Iterable[str]: Names of packages that have no compiled modules.
-
-These modules are just composed of files to be copied and are handled
-differently than packages with compiled modules."""
-
-NO_COPY_FILE_NAMES = [".gitattributes", ".gitignore"]
-"""Iterable[str]: List of files that are not copied in `NON_MODULE_PACKAGES`
-packages."""
-
 
 class Packager(object):
-    def __init__(self):
+    def __init__(self, config_file_path: str, packaging_type: str):
+        self.config_file_path = config_file_path
+        self.packaging_type = packaging_type
         self.source_dir = None
-        self.input_dir = None
         self.output_dir = None
         self.cwd = None
+
+        # parse configuration file
+        self.config = packager_config.decode(self.config_file_path)
 
     def setup_cwd(self, relative_path: Optional[str]=None) -> str:
         """Set the current working directory for this script.
@@ -127,40 +118,23 @@ class Packager(object):
 
         return directory
 
-    def set_input_dir(self, root_dir: Optional[str], input_path: str,
-                      is_relative: bool=True) -> str:
-        """Construct input directory for the packager.
-
-        See `get_directory` for arguments.
-
-        """
-        self.input_dir = Packager.get_directory(root_dir, input_path,
-                                                is_relative)
-        return self.input_dir
-
     def set_output_dir(self, root_dir: Optional[str], output_path: str,
                        is_relative: bool=True) -> str:
-        """Construct output directory for the packager.
-
-        See `get_directory` for arguments.
-
-        """
-        self.output_dir = Packager.get_directory(root_dir, output_path,
-                                                 is_relative)
-        return self.output_dir
-
-    def check_input_and_output_dirs(self):
-        """Check validity of input and output directories.
+        """Construct and check the validity of the output directory for the
+        packager.
 
         Note:
             - If the output directory is not present, it is created.
             - If the output directory is already present, it is wiped.
 
+        See `get_directory` for arguments.
+
         """
-        if not self.input_dir:
-            raise RuntimeError("input_dir is None")
-        if not os.path.isdir(self.input_dir):
-            raise RuntimeError("input_dir doesn't exist.")
+        # construct path
+        self.output_dir = Packager.get_directory(root_dir, output_path,
+                                                 is_relative)
+
+        # check directory validity
         if not self.output_dir:
             raise RuntimeError("output_dir is None")
         if not os.path.isdir(self.output_dir):
@@ -175,73 +149,121 @@ class Packager(object):
             # recreate it
             os.makedirs(self.output_dir, exist_ok=True)
 
+        return self.output_dir
+
+    def handle_modules(self, package_name: str,
+                       output_dir: str,
+                       modules: Iterable[packager_config.Module]):
+        if not modules:
+            return
+
+        for module in modules:
+            # get package dir, e.g: 'src\\RemoteTech-Transmitter'
+            package_dir = self.get_directory(SOURCE_DIR, package_name)
+            if not os.path.isdir(package_dir):
+                raise RuntimeError(
+                    "[-] Error: '{}' is not a directory.".format(package_dir))
+
+            # get binary (assembly) directory, e.g:
+            # 'src\\RemoteTech-Transmitter\\src\\RemoteTech-Transmitter\\bin\\release'
+            bin_dir = os.path.join(package_dir, package_dir, "bin",
+                                   self.packaging_type)
+            if not os.path.isdir(bin_dir):
+                raise RuntimeError(
+                    "[-] Error: '{}' is not a directory.".format(bin_dir))
+
+            # add module name to bin dir to have full path to assembly
+            bin_file = os.path.join(bin_dir, module.name)
+            if not os.path.isfile(bin_file):
+                raise RuntimeError(
+                    "[-] Error: '{}' is not file")
+
+            # create a new dir if needed
+            if module.dst_dir:
+                dst_dir = os.path.join(output_dir, module.dst_dir)
+                os.makedirs(dst_dir)
+            else:
+                dst_dir = output_dir
+
+            # now copy the module to the right place
+            dst_file = os.path.join(dst_dir, module.name)
+            shutil.copy2(bin_file, dst_file)
+
+    @staticmethod
+    def copy_by_pattern(src_dir: str, dst_dir: str, file_list: Iterable[str]):
+        for pattern in file_list:
+            for file_name in glob.glob(os.path.join(src_dir, pattern)):
+                shutil.copy2(file_name, dst_dir)
+
+    def handle_copyable_directories(
+            self, package_name: str,
+            output_dir: str,
+            directories: Iterable[packager_config.Directory]):
+        if not directories:
+            return
+
+        for directory in directories:
+            # get package dir, e.g: 'src\\RemoteTech-Antennas'
+            package_dir = self.get_directory(SOURCE_DIR, package_name)
+            if not os.path.isdir(package_dir):
+                raise RuntimeError(
+                    "[-] Error: '{}' is not a directory.".format(package_dir))
+
+            src_dir = os.path.abspath(
+                os.path.join(package_dir, directory.src_dir))
+            if not os.path.isdir(src_dir):
+                RuntimeError("[-] Error: src directory '{}' doesn't exist."
+                             .format(src_dir))
+
+            if not directory.dst_dir:
+                dst_dir = os.path.abspath(
+                    os.path.join(output_dir, directory.src_dir))
+            else:
+                dst_dir = os.path.join(output_dir, directory.dst_dir)
+
+            # note: we can't use copytree() if the dst dir exists.
+            if not os.path.isdir(dst_dir):
+                shutil.copytree(
+                    src_dir, dst_dir,
+                    ignore=shutil.ignore_patterns(directory.exception_list))
+            else:
+                self.copy_by_pattern(src_dir, dst_dir, directory.copy_list)
+
     def package_release(self):
-        """Build the release package.
+        """Build the release package."""
+        for package_entry_name in self.config:
+            # get package entry
+            package_entry = self.config[package_entry_name]
 
-        """
-        self.package_modules()
-        self.package_directory()
+            # create output directory for package entry
+            package_dir_name = package_entry.package_name
+            if not package_dir_name:
+                package_dir_name = package_entry_name
+            package_dir = os.path.join(self.output_dir, package_dir_name)
+            os.makedirs(package_dir)
 
-    def package_directory(self):
-        for package_name in NON_MODULE_PACKAGES:
-            package_path_src = os.path.join(self.source_dir, package_name)
-            if not os.path.isdir(package_path_src):
-                raise RuntimeError(
-                    "Packaging non module: {} is not a directory."
-                    .format(package_path_src))
+            # handle all compiled modules for this package
+            self.handle_modules(package_entry_name, package_dir,
+                                package_entry.modules)
 
-            logging.info("Packaging: {}".format(package_name))
-
-            package_path_dst = os.path.join(self.output_dir, package_name)
-            shutil.copytree(package_path_src, package_path_dst,
-                            ignore=shutil.ignore_patterns(*NO_COPY_FILE_NAMES))
-
-    def package_modules(self):
-        for module_full_path in self.get_modules():
-            # get file name (with extension)
-            _, tail = os.path.split(module_full_path)
-            # get file name
-            root, _ = os.path.splitext(tail)
-
-            if not tail or not root:
-                raise RuntimeError(
-                    "No root or tail in module name.")
-
-            logging.info("Packaging: {}".format(root))
-
-            # create sub-directory in output directory
-            sub_dir = os.path.join(self.output_dir, root)
-            os.mkdir(sub_dir)
-
-            # copy module into newly created output sub-directory
-            old_path = module_full_path
-            new_path = os.path.join(sub_dir, tail)
-            shutil.copy2(old_path, new_path)
-
-    def get_modules(self):
-        for module_name in os.listdir(self.input_dir):
-            module_full_path = os.path.join(self.input_dir, module_name)
-            _, ext = os.path.splitext(module_name)
-            if ext.lower() == ".dll":
-                yield module_full_path
+            # handle anything we have to copy
+            self.handle_copyable_directories(package_entry_name, package_dir,
+                                             package_entry.copyable_directories)
 
 
 def main(args):
     logging.info("Starting packaging script.")
 
-    packager = Packager()
+    packager = Packager(args.config, args.packaging_type)
 
     # set up directories (cwd, input, output)
     packager.setup_cwd(args.cwd)
-    packager.set_input_dir(packager.cwd, args.input_dir,
-                           args.input_dir_relative)
     packager.set_output_dir(packager.cwd, args.output_dir,
                             args.output_dir_relative)
-    packager.check_input_and_output_dirs()
 
     logging.info("Directories:\n\tCurrent working directory: {}"
-                 "\n\tInput directory: {}\n\tOutput directory: {}"
-                 .format(packager.cwd, packager.input_dir, packager.output_dir))
+                 "\n\tOutput directory: {}"
+                 .format(packager.cwd, packager.output_dir))
 
     # do the actual release packaging
     packager.package_release()
@@ -254,16 +276,18 @@ if __name__ == "__main__":
         description='RemoteTech-Complete Packager')
 
     parser.add_argument(
-        "-i", "--input-dir", action="store", dest="input_dir",
-        default=DEFAULT_INPUT_DIR,
-        help="Input directory where to find the built assemblies."
-             " [default: {}]".format(DEFAULT_INPUT_DIR))
+        "-c", "--config", action="store",
+        default=packager_config.DEFAULT_CONFIG_FILE,
+        help="Full path to input configuration file."
+             " [default: {}]".format(packager_config.DEFAULT_CONFIG_FILE))
 
     parser.add_argument(
-        "--input-dir-relative", action="store_false",
-        dest="input_dir_relative", default=True,
-        help="Indicates whether the --input-dir is a relative path or not."
-             " [default: True]")
+        "--cwd", action="store",
+        help="Working directory, relative to this script location.")
+
+    parser.add_argument(
+        "-l", "--logging-level", action="store", dest="logging_level",
+        help="Logging level (as from logging module).")
 
     parser.add_argument(
         "-o", "--output-dir", action="store", dest="output_dir",
@@ -278,12 +302,16 @@ if __name__ == "__main__":
              " [default: True]")
 
     parser.add_argument(
-        "--cwd", action="store",
-        help="Working directory, relative to this script location.")
+        "-p", "--packaging-type", action="store", dest="packaging_type",
+        choices={"release", "debug"}, default="release",
+        help="Packaging type: debug or release [default: release].")
 
     parser.add_argument(
-        "-l", "--logging-level", action="store", dest="logging_level",
-        help="Logging level (as from logging module).")
+        "--version", action="version", version="%(prog)s 0.2")
+
+    parser.add_argument(
+        "-z", "--zip", action="store_true", default=False,
+        help="Also zip the package [output in default output directory].")
 
     # parse arguments
     parsed_args = parser.parse_args()
