@@ -20,7 +20,7 @@ namespace RemoteTech.Transmitter
     [KSPModule("Data Transmitter (RT)")]
     public class ModuleRTDataTransmitter : ModuleDataTransmitter
     {
-        // TODO: move this to settings?
+        // TODO: move this to settings file?
         private const double stockToRTTelemetryConsumptionFactor = 0.05;
         private const double stockToRTTransmitConsumptionFactor = 0.2;
         private const double stockToRTTransmitDataRateFactor = 0.2;
@@ -383,7 +383,7 @@ namespace RemoteTech.Transmitter
                     yield return null;
                 }
                 statusText = "Transmitting";
-                while (dataThrough < dataAmount && !xmitAborted)
+                while (dataThrough < dataAmount && !xmitAborted && CanTransmit())
                 {
                     yield return new WaitForFixedUpdate();
                     var pushData = (float)(TimeWarp.fixedDeltaTime * bandwidth);
