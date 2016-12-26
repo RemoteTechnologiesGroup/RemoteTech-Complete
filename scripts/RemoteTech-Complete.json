@@ -1,0 +1,60 @@
+{
+    "RemoteTech-Antennas": {
+        "copyable_directories": [
+            {
+                "copy_list": [
+                    "*.md",
+                    "*.txt"
+                ],
+                "dst_dir": null,
+                "exception_list": [],
+                "src_dir": "."
+            },
+            {
+                "copy_list": [],
+                "dst_dir": null,
+                "exception_list": [],
+                "src_dir": "Parts"
+            }
+        ],
+        "modules": [],
+        "package_name": "RemoteTech-Antennas"
+    },
+    "RemoteTech-Common": {
+        "copyable_directories": [],
+        "modules": [
+            {
+                "dst_dir": "Plugins",
+                "name": "RemoteTech-Common.dll"
+            }
+        ],
+        "package_name": "RemoteTech-Common"
+    },
+    "RemoteTech-Delay": {
+        "copyable_directories": [
+            {
+                "copy_list": [],
+                "dst_dir": null,
+                "exception_list": [],
+                "src_dir": "Textures"
+            }
+        ],
+        "modules": [
+            {
+                "dst_dir": "Plugins",
+                "name": "RemoteTech-Delay.dll"
+            }
+        ],
+        "package_name": "RemoteTech-Delay"
+    },
+    "RemoteTech-Transmitter": {
+        "copyable_directories": [],
+        "modules": [
+            {
+                "dst_dir": "Plugins",
+                "name": "RemoteTech-Transmitter.dll"
+            }
+        ],
+        "package_name": "RemoteTech-Transmitter"
+    }
+}
