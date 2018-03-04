@@ -56,14 +56,15 @@
     # setup env. variables
     - cmd: echo %APPVEYOR_BUILD_FOLDER%
     - cmd: set DOWNLOAD_FOLDER=%APPVEYOR_BUILD_FOLDER%\..
-    - cmd: set ASSEMBLY_FOLDER=KSP_Assemblies
+    - cmd: set ASSEMBLY_FOLDER=%APPVEYOR_BUILD_FOLDER%\src\KSP_Assemblies
+    - cmd: set EXE_MASTERBUILD=%APPVEYOR_BUILD_FOLDER%\scripts\build.bat
     # download required KSP DLLs
     - cmd: curl -fsS -o%DOWNLOAD_FOLDER%\dlls.7z https://d237kiopfuf7h0.cloudfront.net/download/KSPDLL_1_3_1.zip
     # extract them
     - cmd: cd %DOWNLOAD_FOLDER% & dir
     - cmd: 7z.exe e -p%DLL_ARCH_PASS% -o%ASSEMBLY_FOLDER% %DOWNLOAD_FOLDER%\dlls.7z
-    - cmd: cd %APPVEYOR_BUILD_FOLDER% & dir
-    - cmd: call "%APPVEYOR_BUILD_FOLDER%\scripts\build.bat"
+    - cmd: cd %EXE_MASTERBUILD% & dir
+    - cmd: call "%EXE_MASTERBUILD%"
 
   #---------------------------------#
   #       build configuration       #
