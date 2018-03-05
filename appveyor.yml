@@ -94,8 +94,7 @@
   # scripts to run before build
   before_build:
     # pull repos changes
-    #- cmd: git init
-    #- cmd: git status
+    - cmd: git init
     - cmd: git checkout TaxiService-attempt
     - cmd: bash scripts\update_subtrees.sh
 
