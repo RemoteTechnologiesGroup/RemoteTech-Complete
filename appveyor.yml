@@ -58,14 +58,17 @@
     - cmd: set DOWNLOAD_FOLDER=%APPVEYOR_BUILD_FOLDER%\..
     - cmd: set ASSEMBLY_FOLDER=%APPVEYOR_BUILD_FOLDER%\src\KSP_Assemblies
     - cmd: set BUILD_FOLDER=%APPVEYOR_BUILD_FOLDER%\scripts
-    # download required KSP DLLs
+    # download and extract KSP DLLs
     - cmd: curl -fsS -o%DOWNLOAD_FOLDER%\dlls.7z https://d237kiopfuf7h0.cloudfront.net/download/KSPDLL_1_3_1.zip
-    # extract them
     - cmd: cd %DOWNLOAD_FOLDER% & dir
     - cmd: 7z.exe e -p%DLL_ARCH_PASS% -o%ASSEMBLY_FOLDER% %DOWNLOAD_FOLDER%\dlls.7z
+    # display what are in the directories
     - cmd: cd %ASSEMBLY_FOLDER% & dir
     - cmd: cd %BUILD_FOLDER% & dir
+    - cmd: cd %APPVEYOR_BUILD_FOLDER% & dir
+    # pull repos changes
     - cmd: bash %BUILD_FOLDER%\update_subtrees.sh
+    #
     - cmd: call "%BUILD_FOLDER%\build.bat"
 
   #---------------------------------#
