@@ -67,7 +67,7 @@
     - cmd: cd %BUILD_FOLDER% & dir
     - cmd: cd %APPVEYOR_BUILD_FOLDER% & dir
     # pull repos changes
-    - cmd: bash %BUILD_FOLDER%\update_subtrees.sh
+    - cmd: bash scripts\update_subtrees.sh
     #
     - cmd: call "%BUILD_FOLDER%\build.bat"
 
