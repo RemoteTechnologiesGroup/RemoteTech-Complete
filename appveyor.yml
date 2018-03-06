@@ -48,13 +48,14 @@
     DLL_ARCH_PASS: # KSP DLLs archive password (secured)
       secure: vfhIenu/wQqC0Yuy4u4tOQ==
     matrix:
-        # set this flag to immediately finish build once one of the jobs fails.
-        fast_finish: true
-        # select python version
-        - PYTHON: "C:\\Python36-x64"
-          PYTHON_VERSION: "3.6.3"
-          PYTHON_ARCH: "64"
-          PIP: "C:\\Python36-x64\\Scripts\\pip"
+      - PYTHON: "C:\\Python36-x64"
+        PYTHON_VERSION: "3.6.3"
+        PYTHON_ARCH: "64"
+        PIP: "C:\\Python36-x64\\Scripts\\pip"
+
+  matrix:
+    # set this flag to immediately finish build once one of the jobs fails.
+    fast_finish: true
 
   # scripts that run after cloning repository
   install:
