@@ -116,8 +116,8 @@
 
   # scripts to run after build
   after_build:
-    - cmd: python --version
-    - cmd: python %BUILD_FOLDER%\packager.py
+    - cmd: python3 --version
+    - cmd: python3 %BUILD_FOLDER%\packager.py
 
   # to disable automatic builds
   #build: off
