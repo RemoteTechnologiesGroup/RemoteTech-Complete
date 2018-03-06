@@ -51,6 +51,8 @@
   matrix:
     # set this flag to immediately finish build once one of the jobs fails.
     fast_finish: true
+    # select python version
+    - PYTHON: "C:\\Python36-x64"
 
   # scripts that run after cloning repository
   install:
@@ -68,8 +70,6 @@
     - cmd: cd %ASSEMBLY_FOLDER% & dir
     - cmd: cd %BUILD_FOLDER% & dir
     - cmd: cd %APPVEYOR_BUILD_FOLDER% & dir
-    # git workaround
-    #- cmd: git init
 
   #---------------------------------#
   #       build configuration       #
@@ -116,8 +116,8 @@
 
   # scripts to run after build
   after_build:
-    - cmd: python3 --version
-    - cmd: python3 %BUILD_FOLDER%\packager.py
+    - cmd: python --version
+    - cmd: python %BUILD_FOLDER%\packager.py --cwd ../ --logging-level info --version 0.1.0
 
   # to disable automatic builds
   #build: off
