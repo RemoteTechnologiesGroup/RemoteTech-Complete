@@ -97,7 +97,12 @@
   # scripts to run before build
   before_build:
     # pull repos changes
+    - cmd: cat %BUILD_FOLDER%\update_subtrees.sh
     - cmd: bash %BUILD_FOLDER%\update_subtrees.sh
+    
+  # to run your custom scripts instead of automatic MSBuild
+  build_script:
+    - cmd: call "%BUILD_FOLDER%\build.bat"
 
   # scripts to run *after* solution is built and *before* automatic packaging occurs (web apps, NuGet packages, Azure Cloud Services)
   before_package:
@@ -111,11 +116,7 @@
 
   # scripts to run after build
   after_build:
-    - cmd: echo do python packager thing
-
-  # to run your custom scripts instead of automatic MSBuild
-  build_script:
-    - cmd: call "%BUILD_FOLDER%\build.bat"
+    - cmd: python %BUILD_FOLDER%\packager.py
 
   # to disable automatic builds
   #build: off
