@@ -33,7 +33,7 @@
 
   # scripts that are called at very beginning, before repo cloning
   init:
-    - git config --global core.autocrlf input user.name "KSP-TaxiService"
+    - git config --global user.name "KSP-TaxiService" core.autocrlf input
 
   # clone directory
   clone_folder: c:\projects\RemoteTech-Complete
