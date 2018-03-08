@@ -63,12 +63,16 @@
   # scripts that run after cloning repository
   install:
     # Note: by default, all script lines are interpreted as batch
+    # change default python version to minimum 3.5
+    - set PATH=%PYTHON%;%PYTHON%\Scripts;%PATH%;C:\Program Files\Git\mingw64\bin
+    - cmd: python --version
+    - cmd: python -c "import struct; print(struct.calcsize('P') * 8)"
     # setup env. variables
     - cmd: echo %APPVEYOR_BUILD_FOLDER%
     - cmd: set DOWNLOAD_FOLDER=%APPVEYOR_BUILD_FOLDER%\..
     - cmd: set ASSEMBLY_FOLDER=%APPVEYOR_BUILD_FOLDER%\src\KSP_Assemblies
     - cmd: set BUILD_FOLDER=%APPVEYOR_BUILD_FOLDER%\scripts
-    - set PATH=%PYTHON%;%PYTHON%\Scripts;%PATH%;C:\Program Files\Git\mingw64\bin
+    - cmd: set OUTPUT_FOLDER=%APPVEYOR_BUILD_FOLDER%\src\output
     # download and extract KSP DLLs
     - cmd: curl -fsS -o%DOWNLOAD_FOLDER%\dlls.7z https://d237kiopfuf7h0.cloudfront.net/download/KSPDLL_1_3_1.zip
     - cmd: cd %DOWNLOAD_FOLDER% & dir
@@ -123,12 +127,12 @@
 
   # scripts to run after build
   after_build:
-    - cmd: python --version
-    - cmd: python -c "import struct; print(struct.calcsize('P') * 8)"
-    - cmd: python %BUILD_FOLDER%\packager.py --cwd ../ --logging-level info --version 0.1.0
+    - cmd: python %BUILD_FOLDER%\packager.py --cwd ../ --logging-level info --version 0.1.0 --zip
+    - cmd: cd %OUTPUT_FOLDER% & dir
 
   # to disable automatic builds
   #build: off
+
 
   #---------------------------------#
   #      artifacts configuration    #
@@ -136,8 +140,8 @@
 
   artifacts:
     # pushing entire folder as a zip archive
-    #- path: artifacts\RemoteTech.zip
-      #name: rt_gd
+    - path: %OUTPUT_FOLDER%\RemoteTech.zip
+      name: rt_c_gd
 
   #---------------------------------#
   #     deployment configuration    #
@@ -155,16 +159,16 @@
     # Deploy to GitHub 'releases'
     #- provider: GitHub
       # artfact we want to push on github
-    #  artifact: rt_gd
+    #  artifact: rt_c_gd
       # release name pushed on github
-    #  release: RemoteTech-$(appveyor_build_version)
+    #  release: RemoteTech-Complete-$(appveyor_build_version)
       # auth token to push on github
     #  auth_token:
     #    secure: n+llubPy/E9M9wRI1EkEM+dTxzDem7dVCquHhNwHCokxKP42l2svIO9deKnClD4y
       # is it a draft release?
-    #  draft: false
+    #  draft: true
       # is a a pre-release?
-    #  prerelease: true
+    #  prerelease: false
       # which branch?
     #  on:
     #    branch: develop
