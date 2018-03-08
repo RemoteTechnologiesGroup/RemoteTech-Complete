@@ -133,15 +133,14 @@
   # to disable automatic builds
   #build: off
 
-
   #---------------------------------#
   #      artifacts configuration    #
   #---------------------------------#
 
   artifacts:
     # pushing entire folder as a zip archive
-    - path: %OUTPUT_FOLDER%\RemoteTech.zip
-      name: rt_c_gd
+    #- path: %OUTPUT_FOLDER%\RemoteTech.zip
+    #  name: rt_c_gd
 
   #---------------------------------#
   #     deployment configuration    #
