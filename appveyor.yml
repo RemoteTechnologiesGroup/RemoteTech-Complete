@@ -47,6 +47,24 @@
   environment:
     DLL_ARCH_PASS: # KSP DLLs archive password (secured)
       secure: vfhIenu/wQqC0Yuy4u4tOQ==
+      
+    global:
+    # SDK v7.0 MSVC Express 2008's SetEnv.cmd script will fail if the
+    # /E:ON and /V:ON options are not enabled in the batch script intepreter
+    # See: http://stackoverflow.com/a/13751649/163740
+    CMD_IN_ENV: "cmd /E:ON /V:ON /C .\\.ci\\run_with_env.cmd"
+
+    matrix:
+      - PYTHON: "C:\\Python34"
+        PYTHON_VERSION: "3.4"
+        PYTHON_ARCH: "32"
+
+      - PYTHON: "C:\\Python34-x64"
+        PYTHON_VERSION: "3.4"
+        PYTHON_ARCH: "64"
+
+  cache:
+    - "C:\\pip_cache"
 
   matrix:
     # set this flag to immediately finish build once one of the jobs fails.
@@ -60,7 +78,7 @@
     - cmd: set DOWNLOAD_FOLDER=%APPVEYOR_BUILD_FOLDER%\..
     - cmd: set ASSEMBLY_FOLDER=%APPVEYOR_BUILD_FOLDER%\src\KSP_Assemblies
     - cmd: set BUILD_FOLDER=%APPVEYOR_BUILD_FOLDER%\scripts
-    - cmd: set PYTHON3_EXE=C:\\Python36
+    - set PATH=%PYTHON%;%PYTHON%\Scripts;%PATH%;C:\Program Files\Git\mingw64\bin
     # download and extract KSP DLLs
     - cmd: curl -fsS -o%DOWNLOAD_FOLDER%\dlls.7z https://d237kiopfuf7h0.cloudfront.net/download/KSPDLL_1_3_1.zip
     - cmd: cd %DOWNLOAD_FOLDER% & dir
@@ -115,8 +133,9 @@
 
   # scripts to run after build
   after_build:
-    - cmd: %PYTHON3_EXE% --version
-    - cmd: %PYTHON3_EXE% %BUILD_FOLDER%\packager.py --cwd ../ --logging-level info --version 0.1.0
+    - cmd: python --version
+    - cmd: python -c "import struct; print(struct.calcsize('P') * 8)"
+    - cmd: python %BUILD_FOLDER%\packager.py --cwd ../ --logging-level info --version 0.1.0
 
   # to disable automatic builds
   #build: off
