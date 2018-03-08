@@ -47,11 +47,6 @@
   environment:
     DLL_ARCH_PASS: # KSP DLLs archive password (secured)
       secure: vfhIenu/wQqC0Yuy4u4tOQ==
-    matrix:
-      - PYTHON: "C:\\Python36-x64"
-        PYTHON_VERSION: "3.6.3"
-        PYTHON_ARCH: "64"
-        PIP: "C:\\Python36-x64\\Scripts\\pip"
 
   matrix:
     # set this flag to immediately finish build once one of the jobs fails.
@@ -65,6 +60,7 @@
     - cmd: set DOWNLOAD_FOLDER=%APPVEYOR_BUILD_FOLDER%\..
     - cmd: set ASSEMBLY_FOLDER=%APPVEYOR_BUILD_FOLDER%\src\KSP_Assemblies
     - cmd: set BUILD_FOLDER=%APPVEYOR_BUILD_FOLDER%\scripts
+    - cmd: set PYTHON3_EXE=C:\\Python36
     # download and extract KSP DLLs
     - cmd: curl -fsS -o%DOWNLOAD_FOLDER%\dlls.7z https://d237kiopfuf7h0.cloudfront.net/download/KSPDLL_1_3_1.zip
     - cmd: cd %DOWNLOAD_FOLDER% & dir
@@ -119,8 +115,8 @@
 
   # scripts to run after build
   after_build:
-    - cmd: python --version
-    - cmd: python %BUILD_FOLDER%\packager.py --cwd ../ --logging-level info --version 0.1.0
+    - cmd: %PYTHON3_EXE% --version
+    - cmd: %PYTHON3_EXE% %BUILD_FOLDER%\packager.py --cwd ../ --logging-level info --version 0.1.0
 
   # to disable automatic builds
   #build: off
