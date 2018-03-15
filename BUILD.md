@@ -29,7 +29,21 @@ The `scripts` folder contains all scripts and configuration files necessary to b
 Currently, we use the pipeline script, `appveyor.yml`, in the root directory to perform actions at various stages of the entire build process, such as pre-build, post-build and pre-package.
 
 # Build a RemoteTech release
-W.I.P
+Sequence of major steps is as follows.
+1. Perform configurations to a build environment
+
+   1. choose Visual Studio 2015
+   2. point to specific branch of the central repository
+   3. set up environment path to Python 3.5
+   4. set up Git user details
+   
+2. Clone GitHub central repository fully
+3. Download and unzip the password-protected package of KSP assembly files to a temp folder
+4. Call `update_subtrees.sh` to get latest changes from all component repositories
+5. Call `build.bat` to start the build process
+6. Call `packager.py` with relevant arguments to place resulting files into GameData folder and to zip the folder
+7. Deploy the release to a provider such as GitHub
+8. Give a shout to KSP community on this release
 
 # Troubleshooting difficult problems
 1. Git subtree pull error `fatal: Not a git repository (or any of the parent directories): .git`
