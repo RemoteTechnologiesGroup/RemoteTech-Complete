@@ -120,13 +120,13 @@ def encode(file_path: str):
 
     rt_antennas = PackageEntry("RemoteTech-Antennas", False)
 
-    # copy file in root dir
+    # copy files in root dir
     rt_antennas_dir = Directory(".")
-    patterns = ["*.md", "*.txt"]
+    patterns = ["*.md", "*.txt", "*.cfg"]
     rt_antennas_dir.copy_list.extend(patterns)
+    rt_antennas.add_copyable_directory(rt_antennas_dir)
 
     # copy parts directory
-    rt_antennas.add_copyable_directory(rt_antennas_dir)
     rt_antennas_parts = Directory("Parts")
     rt_antennas.add_copyable_directory(rt_antennas_parts)
 
@@ -137,6 +137,13 @@ def encode(file_path: str):
     #
 
     rt_common = PackageEntry("RemoteTech-Common")
+
+    # copy files in root dir
+    rt_common_dir = Directory(".")
+    patterns = ["*.md"]
+    rt_common_dir.copy_list.extend(patterns)
+    rt_common.add_copyable_directory(rt_common_dir)
+
     package_dict[rt_common.package_name] = rt_common
 
     #
@@ -144,8 +151,17 @@ def encode(file_path: str):
     #
 
     rt_delay = PackageEntry("RemoteTech-Delay")
+
+    # copy files in root dir
+    rt_delay_dir = Directory(".")
+    patterns = ["*.md"]
+    rt_delay_dir.copy_list.extend(patterns)
+    rt_delay.add_copyable_directory(rt_delay_dir)
+
+    # copy texture directory
     delay_textures = Directory("Textures")
     rt_delay.add_copyable_directory(delay_textures)
+
     package_dict[rt_delay.package_name] = rt_delay
 
     #
@@ -153,6 +169,13 @@ def encode(file_path: str):
     #
 
     rt_transmitter = PackageEntry("RemoteTech-Transmitter")
+
+    # copy files in root dir
+    rt_transmitter_dir = Directory(".")
+    patterns = ["*.md"]
+    rt_transmitter_dir.copy_list.extend(patterns)
+    rt_transmitter.add_copyable_directory(rt_transmitter_dir)
+
     package_dict[rt_transmitter.package_name] = rt_transmitter
 
     with open(file_path, "w") as f:
@@ -165,7 +188,8 @@ def main(args):
     if config_type == "encode":
         encode(DEFAULT_CONFIG_FILE)
     elif config_type == "decode":
-        decode(DEFAULT_CONFIG_FILE)
+        package_dict = decode(DEFAULT_CONFIG_FILE)
+        # no uses of decoded JSON content are identified yet
     else:
         print("[-] Error: unknown config type: {}".format(config_type))
 
@@ -179,7 +203,7 @@ if __name__ == "__main__":
         "-c", "--config-type", action="store", dest="config_type",
         choices={"encode", "decode"}, default="encode",
         help="Config type [default: encode]:\n\tencode (build config file)"
-             "\n\tdecode (print current file).")
+             "\n\tdecode (read config file).")
 
     parsed_args = parser.parse_args()
 

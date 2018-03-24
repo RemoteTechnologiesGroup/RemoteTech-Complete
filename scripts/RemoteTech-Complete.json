@@ -4,7 +4,8 @@
             {
                 "copy_list": [
                     "*.md",
-                    "*.txt"
+                    "*.txt",
+                    "*.cfg"
                 ],
                 "dst_dir": null,
                 "exception_list": [],
@@ -21,7 +22,16 @@
         "package_name": "RemoteTech-Antennas"
     },
     "RemoteTech-Common": {
-        "copyable_directories": [],
+        "copyable_directories": [
+            {
+                "copy_list": [
+                    "*.md"
+                ],
+                "dst_dir": null,
+                "exception_list": [],
+                "src_dir": "."
+            }
+        ],
         "modules": [
             {
                 "dst_dir": "Plugins",
@@ -32,6 +42,14 @@
     },
     "RemoteTech-Delay": {
         "copyable_directories": [
+            {
+                "copy_list": [
+                    "*.md"
+                ],
+                "dst_dir": null,
+                "exception_list": [],
+                "src_dir": "."
+            },
             {
                 "copy_list": [],
                 "dst_dir": null,
@@ -48,7 +66,16 @@
         "package_name": "RemoteTech-Delay"
     },
     "RemoteTech-Transmitter": {
-        "copyable_directories": [],
+        "copyable_directories": [
+            {
+                "copy_list": [
+                    "*.md"
+                ],
+                "dst_dir": null,
+                "exception_list": [],
+                "src_dir": "."
+            }
+        ],
         "modules": [
             {
                 "dst_dir": "Plugins",
