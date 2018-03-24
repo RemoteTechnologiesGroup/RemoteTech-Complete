@@ -4,8 +4,14 @@
 Packager script for RemoteTech-Complete.
 
 Prerequisites:
-    - Expect built assemblies (*.dll) in RemoteTech-Complete\src\output
-        - can be overridden with --input-dir.
+    - Expect built assemblies (*.dll) and assoicated files in 
+        RemoteTech-Complete\src\[sub repositories] directories.
+
+    - Expect RemoteTech-Complete.json of specific files and directories
+        of the sub repositories to include into the final output
+        directory.
+
+    - Expect GameData folder as final output directory.
 
     - Working directory is the root directory of the repository
         (RemoteTech-Complete/) unless changed with the --cwd command line
@@ -20,6 +26,9 @@ import glob
 
 import packager_config
 
+PACKAGER_VERSION = 0.3
+"""str: program versioning"""
+
 LOGGING_LEVELS = {
     'debug': logging.DEBUG,
     'info': logging.INFO,
@@ -33,11 +42,21 @@ option."""
 SOURCE_DIR = "src"
 """str: name of the source directory (relative to the root folder)."""
 
-DEFAULT_OUTPUT_DIR = "{0}{1}GameData{1}RemoteTech".format(SOURCE_DIR, os.sep)
+DEFAULT_OUTPUT_DIR = "GameData{0}RemoteTech".format(os.sep)
 """str: default output directory for the packager.
 
  This is the location where the final package is put."""
 
+DEFAULT_ZIP_INPUT_DIR = "GameData".format(os.sep)
+"""str: default input directory (relative to the root folder) to zip."""
+
+DEFAULT_ZIP_OUTPUT_DIR = "output".format(os.sep)
+"""str: default output directory (relative to the root folder) for the packager.
+
+ This is the location where the zipped final package is deposited in."""
+
+DEFAULT_ZIP_FILENAME = "RemoteTech"
+"""str: default filename for a zipped file."""
 
 class Packager(object):
     def __init__(self, config_file_path: str, packaging_type: str):
@@ -225,7 +244,7 @@ class Packager(object):
             if not os.path.isdir(dst_dir):
                 shutil.copytree(
                     src_dir, dst_dir,
-                    ignore=shutil.ignore_patterns(directory.exception_list))
+                    ignore=shutil.ignore_patterns(*directory.exception_list))
             else:
                 self.copy_by_pattern(src_dir, dst_dir, directory.copy_list)
 
@@ -254,6 +273,8 @@ class Packager(object):
 def main(args):
     logging.info("Starting packaging script.")
 
+    logging.info("Arguments: {}".format(args))
+
     packager = Packager(args.config, args.packaging_type)
 
     # set up directories (cwd, input, output)
@@ -267,6 +288,21 @@ def main(args):
 
     # do the actual release packaging
     packager.package_release()
+
+    # perform zip if required
+    if args.zip:
+        logging.info("Zipping {0} as {1}{2}{3}.zip"
+                     .format(args.zip_input_dir, 
+                             args.zip_output_dir, 
+                             os.sep, 
+                             DEFAULT_ZIP_FILENAME))
+
+        shutil.make_archive("{0}{1}{2}"
+                            .format(args.zip_output_dir, 
+                                    os.sep, 
+                                    DEFAULT_ZIP_FILENAME), 
+                            'zip', 
+                            args.zip_input_dir)
 
     logging.info("Job done. Quitting!")
 
@@ -307,11 +343,23 @@ if __name__ == "__main__":
         help="Packaging type: debug or release [default: release].")
 
     parser.add_argument(
-        "--version", action="version", version="%(prog)s 0.2")
+        "--version", action="version", version="%(prog)s {}".format(PACKAGER_VERSION))
 
     parser.add_argument(
         "-z", "--zip", action="store_true", default=False,
         help="Also zip the package [output in default output directory].")
+
+    parser.add_argument(
+        "-zi", "--zip-input-dir", action="store", dest="zip_input_dir",
+        default=DEFAULT_ZIP_INPUT_DIR,
+        help="Input directory to zip."
+             "[default: {}]".format(DEFAULT_ZIP_INPUT_DIR))
+
+    parser.add_argument(
+        "-zo", "--zip-output-dir", action="store", dest="zip_output_dir",
+        default=DEFAULT_ZIP_OUTPUT_DIR,
+        help="Output directory where to place the zipped package."
+             "[default: {}]".format(DEFAULT_ZIP_OUTPUT_DIR))
 
     # parse arguments
     parsed_args = parser.parse_args()
