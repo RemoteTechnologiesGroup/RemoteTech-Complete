@@ -143,6 +143,10 @@ def encode(file_path: str):
     patterns = ["*.md"]
     rt_common_dir.copy_list.extend(patterns)
     rt_common.add_copyable_directory(rt_common_dir)
+    
+    # copy texture directory
+    common_textures = Directory("Textures")
+    rt_common.add_copyable_directory(common_textures)
 
     package_dict[rt_common.package_name] = rt_common
 

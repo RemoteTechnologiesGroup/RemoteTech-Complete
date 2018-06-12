@@ -30,6 +30,12 @@
                 "dst_dir": null,
                 "exception_list": [],
                 "src_dir": "."
+            },
+            {
+                "copy_list": [],
+                "dst_dir": null,
+                "exception_list": [],
+                "src_dir": "Textures"
             }
         ],
         "modules": [
