@@ -181,7 +181,22 @@ def encode(file_path: str):
     rt_transmitter.add_copyable_directory(rt_transmitter_dir)
 
     package_dict[rt_transmitter.package_name] = rt_transmitter
+    
+    #
+    # RemoteTech-CommandHandler
+    #
 
+    rt_cmdhandler = PackageEntry("RemoteTech-CommandHandler")
+
+    # copy files in root dir
+    rt_cmdhandler_dir = Directory(".")
+    patterns = ["*.md"]
+    rt_cmdhandler_dir.copy_list.extend(patterns)
+    rt_cmdhandler.add_copyable_directory(rt_cmdhandler_dir)
+
+    package_dict[rt_cmdhandler.package_name] = rt_cmdhandler
+
+    # generate json file
     with open(file_path, "w") as f:
         json.dump(package_dict, f, cls=DefaultEncoder, sort_keys=True,
                   indent=4, separators=(',', ': '))

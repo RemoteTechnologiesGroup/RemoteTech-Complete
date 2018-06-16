@@ -21,6 +21,25 @@
         "modules": [],
         "package_name": "RemoteTech-Antennas"
     },
+    "RemoteTech-CommandHandler": {
+        "copyable_directories": [
+            {
+                "copy_list": [
+                    "*.md"
+                ],
+                "dst_dir": null,
+                "exception_list": [],
+                "src_dir": "."
+            }
+        ],
+        "modules": [
+            {
+                "dst_dir": "Plugins",
+                "name": "RemoteTech-CommandHandler.dll"
+            }
+        ],
+        "package_name": "RemoteTech-CommandHandler"
+    },
     "RemoteTech-Common": {
         "copyable_directories": [
             {
