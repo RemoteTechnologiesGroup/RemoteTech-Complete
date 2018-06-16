@@ -10,6 +10,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RemoteTech-Delay", "RemoteT
 		{95CBBD96-ACEA-42D7-B1B5-05080A8C47FC} = {95CBBD96-ACEA-42D7-B1B5-05080A8C47FC}
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RemoteTech-CommandHandler", "RemoteTech-CommandHandler\src\RemoteTech-CommandHandler\RemoteTech-CommandHandler.csproj", "{0D0E27A8-16C4-4526-9DF8-07C2F8FCB20A}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RemoteTech-Transmitter", "RemoteTech-Transmitter\src\RemoteTech-Transmitter\RemoteTech-Transmitter.csproj", "{45DE8446-3834-4F31-9025-5FC30A0617F7}"
 EndProject
 Global
@@ -26,6 +28,10 @@ Global
 		{BD641114-CDC7-411C-81B0-389EC165F1BE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BD641114-CDC7-411C-81B0-389EC165F1BE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BD641114-CDC7-411C-81B0-389EC165F1BE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0D0E27A8-16C4-4526-9DF8-07C2F8FCB20A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0D0E27A8-16C4-4526-9DF8-07C2F8FCB20A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0D0E27A8-16C4-4526-9DF8-07C2F8FCB20A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0D0E27A8-16C4-4526-9DF8-07C2F8FCB20A}.Release|Any CPU.Build.0 = Release|Any CPU
 		{45DE8446-3834-4F31-9025-5FC30A0617F7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{45DE8446-3834-4F31-9025-5FC30A0617F7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{45DE8446-3834-4F31-9025-5FC30A0617F7}.Release|Any CPU.ActiveCfg = Release|Any CPU
