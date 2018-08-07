@@ -5,7 +5,9 @@
                 "copy_list": [
                     "*.md",
                     "*.txt",
-                    "*.cfg"
+                    "*.cfg",
+                    "*.version",
+                    "*.netkan"
                 ],
                 "dst_dir": null,
                 "exception_list": [],

@@ -122,7 +122,7 @@ def encode(file_path: str):
 
     # copy files in root dir
     rt_antennas_dir = Directory(".")
-    patterns = ["*.md", "*.txt", "*.cfg"]
+    patterns = ["*.md", "*.txt", "*.cfg","*.version","*.netkan"]
     rt_antennas_dir.copy_list.extend(patterns)
     rt_antennas.add_copyable_directory(rt_antennas_dir)
 
