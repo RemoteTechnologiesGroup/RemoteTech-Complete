@@ -138,7 +138,7 @@
 
   artifacts:
     # mark release archive as final output of entire build process
-    - path: artifacts\RemoteTech.zip
+    - path: artifacts\RemoteTechRedev.zip
       name: rt_c_gd
 
   #---------------------------------#
