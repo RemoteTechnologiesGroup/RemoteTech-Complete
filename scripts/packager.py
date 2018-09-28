@@ -42,7 +42,7 @@ option."""
 SOURCE_DIR = "src"
 """str: name of the source directory (relative to the root folder)."""
 
-DEFAULT_OUTPUT_DIR = "GameData{0}RemoteTech".format(os.sep)
+DEFAULT_OUTPUT_DIR = "GameData{0}RemoteTechRedev".format(os.sep)
 """str: default output directory for the packager.
 
  This is the location where the final package is put."""
@@ -55,7 +55,7 @@ DEFAULT_ZIP_OUTPUT_DIR = "output".format(os.sep)
 
  This is the location where the zipped final package is deposited in."""
 
-DEFAULT_ZIP_FILENAME = "RemoteTech"
+DEFAULT_ZIP_FILENAME = "RemoteTechRedev"
 """str: default filename for a zipped file."""
 
 class Packager(object):
